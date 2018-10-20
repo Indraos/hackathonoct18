@@ -5,9 +5,9 @@ import datetime
 import os
 from os import listdir
 from os.path import isfile, join
-import dateutil.parser as pa
-import nltk
 
+YEAR_START = 2010
+YEAR_END = 2017
 class DataLoader:
 	"""
 	Class loading and joining data from Reuters and Stocks Data Set
@@ -91,7 +91,7 @@ class DataLoader:
 		return self.data
 
 	def save(self, path):
-		for year in range(2009, 2018):
+		for year in range(YEAR_START, YEAR_END):
 			for month in range(1,13):
 				filename = os.path.join(str(year),str(month))
 				start_date = str(year) + '-' + str(month) + '-01'
@@ -100,10 +100,23 @@ class DataLoader:
 				with open(os.path.join(path,filename), "wb") as out_file:
 				    pickle.dump(self.data.loc[start_date:end_date], out_file)
 
-	def calculate_embedding(self):
-		self.data['Word Embedding'] = self.data['abstract'].map(nltk.word_tokenize)
 
-data = DataLoader(subcompany_list=['AAPL', 'YHOO'], subset=['reuters_us_news_20171010.csv','reuters_us_news_20171011.csv'])
-a = data.load('/Volumes/Elements/Nachrichten und Kurse/Reuters_US', '/Volumes/Elements/Nachrichten und Kurse/StocksMinute')
-data.calculate_embedding()
+
+
+
+
+reuter_path = '../Reuters_US'
+all_paths = [f for f in listdir(reuter_path) if isfile(join(reuter_path, f))]
+keep_paths = []
+for year in range(YEAR_START, YEAR_END):
+	for i in range(1, 13, 1):
+		this_year_and_month = str(year) + str(i).zfill(2)
+		for path in all_paths:
+			if this_year_and_month in path:
+				keep_paths.append(path)
+
+
+data = DataLoader(subcompany_list=['AAPL'], subset=keep_paths)
+a = data.load(reuter_path, '../StocksMinute')
+# data.calculate_embedding()
 data.save(r'./data')
