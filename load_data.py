@@ -44,9 +44,12 @@ def transform_data(data, diff):
 		return data
 
 def transform_time_text(timestring):
-	if timestring != 'nan' and timestring != "" and timestring != 'NaT':
+	if timestring != 'nan' and timestring != "" and timestring != 'NaT' and 'endif' not in timestring:
 		a = timestring.split(' ')
-		hours = a[3].split(':')
+		try:
+			hours = a[3].split(':')
+		except ValueError as error:
+			print(a,timestring)
 		month_dict = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
 		return datetime.datetime(int(a[5]), int(month_dict[a[1]]), int(a[2]), int(hours[0]), int(hours[1]))
 
@@ -57,8 +60,8 @@ def load_sentences(path, subset=['reuters_us_news_20171010.csv']):
 		if filename in subset:
 			print(filename)
 			data = data.append(pd.read_csv(path + '/' + filename, sep=';', usecols=[0,1,2], names=['date','abstract','text']))
-			data['date'] = data['date'].map(str).map(transform_time_text)
-			data.set_index(pd.DatetimeIndex(data['date']),inplace=True)
+	data['date'] = data['date'].map(str).map(transform_time_text)
+	data.set_index(pd.DatetimeIndex(data['date']), inplace=True)
 	return data
 
 def join_data(path_labels, path_data, subset):
