@@ -6,7 +6,7 @@ import os
 from os import listdir
 from os.path import isfile, join
 
-YEAR_START = 2010
+YEAR_START = 2016
 YEAR_END = 2017
 class DataLoader:
 	"""
@@ -40,7 +40,9 @@ class DataLoader:
 	def __transform_close_prices(self, data, diff):
 		data.set_index(pd.DatetimeIndex(data['date']),inplace=True)
 		data['close'] = pd.to_numeric(data['close'])
-		cutoff = lambda x: 1 if np.sign(x) > self.tol else 0 if np.sign(x) < -self.tol else .5
+		# cutoff = lambda x: x
+		cutoff = lambda x: 1 if np.abs(x) > self.tol else 0
+		#cutoff = lambda x: 1 if np.sign(x) > self.tol else 0 if np.sign(x) < -self.tol else .5
 		data['target'] = data['close'].pct_change(diff).map(cutoff)
 		data.drop(['close','date'], axis=1, inplace=True)
 		return data
@@ -76,7 +78,11 @@ class DataLoader:
 		data = pd.DataFrame(columns=['date','abstract','text'])
 		for filename in os.listdir(self.path_data):
 			if filename in self.subset:
-				data = data.append(pd.read_csv(os.path.join(self.path_data,filename), sep=';', usecols=[0,1,2], names=['date','abstract','text']))
+				data = data.append(pd.read_csv(os.path.join(self.path_data,filename), sep=';', usecols=[0,1,2,3], names=['date','abstract','text','url']))
+		try:
+			data['url'] = data['url'].map(lambda x: x.split('/')[5])
+		except AttributeError as err:
+			print("No url.")
 		data['date'] = data['date'].map(str).map(self.__transform_time_reuters)
 		data.set_index(pd.DatetimeIndex(data['date']), inplace=True)
 		return data
@@ -85,7 +91,7 @@ class DataLoader:
 		self.path_data = path_data
 		self.path_labels = path_labels
 		labels = self.__load_labels()
-		labels = pd.concat(labels)
+		labels = pd.concat(labels, )
 		data = self.__load_data().sort_index()
 		self.data = pd.merge(data, labels, how='inner', left_index=True, right_index=True)
 		return self.data
@@ -100,12 +106,32 @@ class DataLoader:
 				with open(os.path.join(path,filename), "wb") as out_file:
 				    pickle.dump(self.data.loc[start_date:end_date], out_file)
 
+	def _repr_html(self):
+		color = lambda x: "green" if x > .5 else "red"
+		return_string = "<table>"
+		for _,row in data.iterrows():
+		    return_string = return_string + "<tr><td bgcolor=""{}""><h4>{}</h4>{}<tr>".format(color(row['class']), row['abstract'], row['text'][:100])
+		return_string += "</table>"
+		return string
+
+	
+
+	def drop_unnecessary_rows(self):
+		word_list = ['Mac','Apple','iPhone','iPad','App Store','iOS','Mac OS X']
+		drop=[]
+		for name, row in self.data.iterrows():
+			keep = False
+			for l in word_list:
+				if l in row['text']:
+					keep = True
+			if not keep:
+				drop.append(name)
+		self.data = self.data.drop(drop)
 
 
 
 
-
-reuter_path = '../Reuters_US'
+reuter_path = '/Volumes/Elements/Nachrichten und Kurse/Reuters_US'
 all_paths = [f for f in listdir(reuter_path) if isfile(join(reuter_path, f))]
 keep_paths = []
 for year in range(YEAR_START, YEAR_END):
@@ -115,8 +141,10 @@ for year in range(YEAR_START, YEAR_END):
 			if this_year_and_month in path:
 				keep_paths.append(path)
 
+#,'AMZN','GOOGL','AMZN','FB'
 
-data = DataLoader(subcompany_list=['AAPL'], subset=keep_paths)
-a = data.load(reuter_path, '../StocksMinute')
-# data.calculate_embedding()
-data.save(r'./data')
+data = DataLoader(subcompany_list=['AAPL'],subset=keep_paths, tol=.05)
+a = data.load(reuter_path, '/Volumes/Elements/Nachrichten und Kurse/StocksMinute')
+b = data.drop_unnecessary_rows()
+# # data.calculate_embedding()
+# data.save(r'./data')
