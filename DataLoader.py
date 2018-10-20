@@ -100,9 +100,13 @@ class DataLoader:
 				with open(os.path.join(path,filename), "wb") as out_file:
 				    pickle.dump(self.data.loc[start_date:end_date], out_file)
 
-
-
-
+	def _repr_html(self):
+		color = lambda x: "green" if x > .5 else "red"
+		return_string = "<table>"
+		for _,row in data.iterrows():
+		    return_string = return_string + "<tr><td bgcolor=""{}""><h4>{}</h4>{}<tr>".format(color(row['class']), row['abstract'], row['text'][:100])
+		return_string += "</table>"
+		return string
 
 
 reuter_path = '../Reuters_US'
