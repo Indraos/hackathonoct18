@@ -81,15 +81,15 @@ class DataLoader:
 		self.data = {k: pd.merge(data,v, how='inner', left_index=True, right_index=True) for k, v in self.__load_labels().items()}
 		return {k: pd.merge(data,v, how='inner', left_index=True, right_index=True) for k, v in self.__load_labels().items()}
 
-	def save(self):
+	def save(self, path):
 		for key, value in self.data.items():
 			for year in range(2009, 2018):
 				for month in range(1,13):
 					filename = os.path.join(str(key),str(year),str(month))
 					start_date = str(year) + '-' + str(month) + '-01'
 					end_date = str(year) + '-' + str(month) + '-28'
-					os.makedirs(os.path.dirname(filename), exist_ok=True)
-					with open(filename, "wb") as out_file:
+					os.makedirs(os.path.dirname(os.path.join(path,filename)), exist_ok=True)
+					with open(os.path.join(path,filename), "wb") as out_file:
 					    pickle.dump(self.data[key].loc[start_date:end_date], out_file)
 
 	def calculate_embedding(self):
@@ -97,6 +97,6 @@ class DataLoader:
 			data['Word Embedding'] = data['abstract'].map(nltk.word_tokenize)
 
 data = DataLoader()
-a = data.load('/Volumes/Elements/Nachrichten und Kurse/Reuters_US', '/Volumes/Elements/Nachrichten und Kurse/StocksMinute')
+a = data.load('../Reuters_US', '../StocksMinute')
 data.calculate_embedding()
-data.save()
+data.save(r'./data')
