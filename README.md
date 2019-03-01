@@ -1,2 +1,2 @@
 # hackathonoct18
-D-Fine Hackathon
+D-Fine Hackathon on News relevance classification.

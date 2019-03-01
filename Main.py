@@ -22,22 +22,22 @@ path_to_embeddings = r'./dense_headlines/'
 path_to_df = r'./data/'
 
 def train():
-    # w2v_path = r'C:\Users\fkarl\PycharmProjects\Image2SequenceFiles\w2vModel\wiki.en.vec'
-    # w2v_path = r'C:\Users\fkarl\PycharmProjects\Image2SequenceFiles\w2vModel\wiki-news-300d-1M-subword.vec'
     w2v_path = r'C:\Users\fkarl\PycharmProjects\Image2SequenceFiles\w2vModel\en.wiki.bpe.op200000.d300.w2v.bin'
     w2v_model = WordEmbedding.EmbeddingModel(300, w2v_path, True, True)
 
-
+    # restrict to newer data for sake of training time
     YEAR_START = 2010
     YEAR_END = 2017
 
-
+    # produce model
     model = Models.get_stock_pred_model(None, HEADER_LENGTH, SENT_LENGTH)
     model.summary()
     epochs = 10
     for i in range(epochs):
         print('EPOCH: ' + str(i) + ' of ' + str(epochs))
         for year in range(YEAR_START,YEAR_END):
+
+            # load data for year
             print('Year: ' + str(year))
             df_year_path = path_to_df + str(year)
 
@@ -53,20 +53,17 @@ def train():
                 data_frame = pickle.loads(f.read())
 
             data_frame = refine_dataframe(data_frame)
-            # val_data_frame = val_data_frame[val_data_frame['text'].filter(regex=('tech'), axis=0)]
 
-            Y_val = data_frame['BA'].values
-            Y_val = get_targets(Y_val)
-            print('ValidationSet',Counter(list(Y_val)))
+            Y_val = data_frame['BA'].values # take only Boeing stock prices
+            Y_val = get_targets(Y_val) # make some adjustment to the targets; interested in large deviations.
+            print('Validation Set size',Counter(list(Y_val)))
 
-            headers = data_frame['abstract'].map(str).map(str.lower).map(nltk.word_tokenize).values
+            headers = data_frame['abstract'].map(str).map(str.lower).map(nltk.word_tokenize).values # tokenise
             embeddings = [np.array(w2v_model.get_embeddings(sent)) for sent in headers]
             padded_headders = keras.preprocessing.sequence.pad_sequences(embeddings, maxlen=HEADER_LENGTH, dtype='float32', padding='post', truncating='post', value=0.0)
             X_headders_val = np.array(padded_headders)
 
             X_sents_val = get_refined_news(data_frame, w2v_model)
-
-
 
             assert(len(X_headders_val) == len(Y_val))
 
@@ -77,13 +74,10 @@ def train():
 
                 data_frame = refine_dataframe(data_frame)
 
-
                 Y = data_frame['BA'].values
                 Y = get_targets(Y)
-                print('TrainingSet',Counter(list(Y)))
+                print('Training Set size',Counter(list(Y)))
 
-                # with open(embedding_path, 'rb') as f:
-                #     embedded_words = pickle.loads(f.read())
 
                 headers = data_frame['abstract'].map(str).map(str.lower).map(nltk.word_tokenize).values
                 embeddings = [np.array(w2v_model.get_embeddings(sent)) for sent in headers]
@@ -95,7 +89,6 @@ def train():
                 assert(len(Y) == len(X_headders))
                 assert(len(headers) == len(X_headders))
 
-
                 print('*** Training *** on ' + data_frame_path + ' with ' + str(len(Y)) + ' samples')
 
                 model.fit([X_headders, X_sents], Y, batch_size=16, validation_split=0.05, verbose=2, epochs=3)
@@ -103,8 +96,7 @@ def train():
 
                 print('*** Validation ***')
                 predictions = model.predict([X_headders_val, X_sents_val], batch_size=64)
-                rounded_predicitons = [np.round(elem[0]) for elem in predictions]
-                # conservative_results = [1 if elem >= TOL else 0 for elem in predictions]
+                rounded_predicitons = [np.round(elem[0]) for elem in predictions] # could also use conservative_results = [1 if elem >= TOL else 0 for elem in predictions]
                 print('TestResults', Counter(rounded_predicitons))
                 print(metrics.precision_recall_fscore_support(Y_val, rounded_predicitons))
 
